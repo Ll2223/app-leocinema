@@ -55,9 +55,9 @@ spec:
           - name: BACKEND_PORT
             value: "3333"
           - name: PATH_HEALTH
-            value: "/api/health"
+            value: "/health"
           - name: PATH_COMPRAR_INGRESSO
-            value: "/api/comprar-ingresso"
+            value: "/comprar-ingresso"
           resources:
             requests:
               cpu: 100m
@@ -83,7 +83,7 @@ spec:
   - http:
       paths:
       - path: /api/?(.*)
-        pathType: Prefix
+        pathType: ImplementationSpecific
         backend:
           service:
             name: leocinema-backend-svc
