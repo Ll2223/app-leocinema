@@ -9,26 +9,12 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - protocol: TCP
-    port: 3306
-    targetPort: 3306
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
   selector:
     db: mariadb-leocinema
     tier: db
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: mariadb-config
-  namespace: leocinema
-data:
-  init.sql: |
-    GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
-    FLUSH PRIVILEGES;
-    CREATE USER 'leocinemauser'@'%' IDENTIFIED BY 'leocinemapass';
-    CREATE DATABASE leocinemadb;
-    GRANT ALL PRIVILEGES ON leocinemadb.* TO 'leocinemauser'@'%';
-    FLUSH PRIVILEGES;
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -61,27 +47,26 @@ spec:
         tier: db
     spec:
       containers:
-      - name: mariadb
-        image: mariadb
-        ports:
-        - containerPort: 3306
-        volumeMounts:
-        - name: mariadb-data
-          mountPath: /var/lib/mysql
-        - name: config
-          mountPath: /docker-entrypoint-initdb.d
-        env:
-        - name: MARIADB_ROOT_PASSWORD
-          value: "leoborges3005"
-      volumes:
-      - name: config
-        configMap:
-          name: mariadb-config
+        - name: mariadb
+          image: bitnami/mariadb:latest
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            - name: MARIADB_ROOT_PASSWORD
+              value: "leoborges3005"
+            - name: MARIADB_DATABASE
+              value: "leocinemadb"
+            - name: MARIADB_USER
+              value: "leocinemauser"
+            - name: MARIADB_PASSWORD
+              value: "leocinemapass"
   volumeClaimTemplates:
-  - metadata:
-      name: mariadb-data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 1Gi
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
