@@ -85,12 +85,10 @@ spec:
                   - "/bin/sh"
                   - "-c"
                   - |
-                    apt-get update && \
-                    apt-get install -y mysql-client && \
-                    echo "CREATE DATABASE IF NOT EXISTS leocinemadb;" | mysql -u root -p"$MYSQL_ROOT_PASSWORD" && \
-                    echo "CREATE USER IF NOT EXISTS 'leocinemauser'@'%' IDENTIFIED BY 'leocinemapass';" | mysql -u root -p"$MYSQL_ROOT_PASSWORD" && \
-                    echo "GRANT ALL PRIVILEGES ON leocinemadb.* TO 'leocinemauser'@'%';" | mysql -u root -p"$MYSQL_ROOT_PASSWORD" && \
-                    echo "FLUSH PRIVILEGES;" | mysql -u root -p"$MYSQL_ROOT_PASSWORD"
+                    mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS leocinemadb;"
+                    mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER IF NOT EXISTS 'leocinemauser'@'%' IDENTIFIED BY 'leocinemapass';"
+                    mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "GRANT ALL PRIVILEGES ON leocinemadb.* TO 'leocinemauser'@'%';"
+                    mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "FLUSH PRIVILEGES;"
   volumeClaimTemplates:
     - metadata:
         name: mariadb-data
