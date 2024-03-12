@@ -1,91 +1,87 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: leocinema-backend-svc
+  name: mariadb-leocinema-svc
   namespace: leocinema
   labels:
-    app: leocinema-backend
-    tier: app
+    db: mariadb-leocinema
+    tier: db
 spec:
   type: ClusterIP
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 3333
+  - protocol: TCP
+    port: 3306
+    targetPort: 3306
   selector:
-    app: leocinema-backend
-    tier: app
+    db: mariadb-leocinema
+    tier: db
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mariadb-config
+  namespace: leocinema
+data:
+  init.sql: |
+    GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+    FLUSH PRIVILEGES;
+    CREATE USER 'leocinemauser'@'%' IDENTIFIED BY 'leocinemapass';
+    CREATE DATABASE leocinemadb;
+    GRANT ALL PRIVILEGES ON leocinemadb.* TO 'leocinemauser'@'%';
+    FLUSH PRIVILEGES;
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-data
+  namespace: leocinema
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
-  name: leocinema-backend-dep
+  name: mariadb
   namespace: leocinema
-  labels:
-    app: leocinema-backend
-    tier: app
 spec:
+  serviceName: mariadb-leocinema-svc
+  replicas: 1
   selector:
     matchLabels:
-      app: leocinema-backend
-      tier: app
-  replicas: 1
+      db: mariadb-leocinema
+      tier: db
   template:
     metadata:
       labels:
-        app: leocinema-backend
-        tier: app
+        db: mariadb-leocinema
+        tier: db
     spec:
       containers:
-        - name: leocinema
-          image: leobgs/leocinema-backend-test:beta-6
-          ports:
-            - name: http
-              containerPort: 3333
-              protocol: TCP
-          env:
-          - name: DB_HOST
-            value: "mariadb-leocinema-svc"
-          - name: DB_DATABASE
-            value: "leocinemadb"
-          - name: DB_USER
-            value: "leocinemauser"
-          - name: DB_PASSWORD
-            value: "leocinemapass"
-          - name: BACKEND_PORT
-            value: "3333"
-          - name: PATH_HEALTH
-            value: "/health"
-          - name: PATH_COMPRAR_INGRESSO
-            value: "/comprar-ingresso"
-          resources:
-            requests:
-              cpu: 100m
-              memory: 200Mi
-          imagePullPolicy: Always
-      restartPolicy: Always
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 25%
-      maxSurge: 25%
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: nginx-public-api
-  namespace: leocinema
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$1
-spec:
-  ingressClassName: nginx
-  rules:
-  - http:
-      paths:
-      - path: /api/?(.*)
-        pathType: ImplementationSpecific
-        backend:
-          service:
-            name: leocinema-backend-svc
-            port:
-              number: 80
+      - name: mariadb
+        image: mariadb
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: mariadb-data
+          mountPath: /var/lib/mysql
+        - name: config
+          mountPath: /docker-entrypoint-initdb.d
+        env:
+        - name: MARIADB_ROOT_PASSWORD
+          value: "leoborges3005"
+      volumes:
+      - name: config
+        configMap:
+          name: mariadb-config
+  volumeClaimTemplates:
+  - metadata:
+      name: mariadb-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi
