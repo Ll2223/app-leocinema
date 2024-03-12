@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mariadb-leocinema-svc
+  namespace: leocinema
+  labels:
+    db: mariadb-leocinema
+    tier: db
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 3306
+      targetPort: 3306
+  selector:
+    db: mariadb-leocinema
+    tier: db
+---
+apiVersion: v1
+data:
+  init.sh: |
+    #!/bin/sh
+    set -e
+
+    apt-get update
+    apt-get install -y mysql-client
+
+    mysql -u root <<EOF
+    CREATE DATABASE IF NOT EXISTS leocinemadb;
+    CREATE USER IF NOT EXISTS 'leocinemauser'@'%' IDENTIFIED BY 'leocinemapass';
+    GRANT ALL PRIVILEGES ON leocinemadb.* TO 'leocinemauser'@'%';
+    FLUSH PRIVILEGES;
+    EOF
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: mariadb-init-script
+  namespace: leocinema
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-data
+  namespace: leocinema
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mariadb
+  namespace: leocinema
+spec:
+  serviceName: mariadb-leocinema-svc
+  replicas: 1
+  selector:
+    matchLabels:
+      db: mariadb-leocinema
+      tier: db
+  template:
+    metadata:
+      labels:
+        db: mariadb-leocinema
+        tier: db
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: mariadb-data
+              mountPath: /var/lib/mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "leoborges2122"
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - "/bin/sh"
+                  - "-c"
+                  - |
+                    apt-get update && \
+                    apt-get install -y mysql-client && \
+                    echo "CREATE DATABASE IF NOT EXISTS leocinemadb;" | mysql -u root -p"$MYSQL_ROOT_PASSWORD" && \
+                    echo "CREATE USER IF NOT EXISTS 'leocinemauser'@'%' IDENTIFIED BY 'leocinemapass';" | mysql -u root -p"$MYSQL_ROOT_PASSWORD" && \
+                    echo "GRANT ALL PRIVILEGES ON leocinemadb.* TO 'leocinemauser'@'%';" | mysql -u root -p"$MYSQL_ROOT_PASSWORD" && \
+                    echo "FLUSH PRIVILEGES;" | mysql -u root -p"$MYSQL_ROOT_PASSWORD"
+  volumeClaimTemplates:
+    - metadata:
+        name: mariadb-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+
+

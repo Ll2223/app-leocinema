@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: leocinema-frontend-svc
+  namespace: leocinema
+  labels:
+    app: leocinema-frontend
+    tier: app
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  selector:
+    app: leocinema-frontend
+    tier: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: leocinema-frontend-dep
+  namespace: leocinema
+  labels:
+    app: leocinema-frontend
+    tier: app
+spec:
+  selector:
+    matchLabels:
+      app: leocinema-frontend
+      tier: app
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: leocinema-frontend
+        tier: app
+    spec:
+      containers:
+        - name: leocinema-frontend
+          image: leobgs/leocinema-frontend-test:beta-3
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+          - name: BACKEND_URL
+            value: "4.255.65.128/api/comprar-ingresso"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          imagePullPolicy: Always
+      restartPolicy: Always
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-public
+  namespace: leocinema
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host:
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: leocinema-frontend-svc
+            port:
+              number: 80

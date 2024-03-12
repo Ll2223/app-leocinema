@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: leocinema-backend-svc
+  namespace: leocinema
+  labels:
+    app: leocinema-backend
+    tier: app
+spec:
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3333
+  selector:
+    app: leocinema-backend
+    tier: app
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: leocinema-backend-dep
+  namespace: leocinema
+  labels:
+    app: leocinema-backend
+    tier: app
+spec:
+  selector:
+    matchLabels:
+      app: leocinema-backend
+      tier: app
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: leocinema-backend
+        tier: app
+    spec:
+      containers:
+        - name: leocinema
+          image: leobgs/leocinema-backend-test:beta-6
+          ports:
+            - name: http
+              containerPort: 3333
+              protocol: TCP
+          env:
+          - name: DB_HOST
+            value: "mariadb-leocinema-svc"
+          - name: DB_DATABASE
+            value: "leocinemadb"
+          - name: DB_USER
+            value: "leocinemauser"
+          - name: DB_PASSWORD
+            value: "leocinemapass"
+          - name: BACKEND_PORT
+            value: "3333"
+          - name: PATH_HEALTH
+            value: "/"
+          - name: PATH_COMPRAR_INGRESSO
+            value: "/"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          imagePullPolicy: Always
+      restartPolicy: Always
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-public-api
+  namespace: leocinema
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1 #
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /api/comprar-ingresso/
+        pathType: Prefix
+        backend:
+          service:
+            name: leocinema-backend-svc
+            port:
+              number: 80
+      - path: /api/health/
+        pathType: Prefix
+        backend:
+          service:
+            name: leocinema-backend-svc
+            port:
+              number: 80
