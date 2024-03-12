@@ -1,101 +1,91 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: mariadb-leocinema-svc
+  name: leocinema-backend-svc
   namespace: leocinema
   labels:
-    db: mariadb-leocinema
-    tier: db
+    app: leocinema-backend
+    tier: app
 spec:
   type: ClusterIP
   ports:
     - protocol: TCP
-      port: 3306
-      targetPort: 3306
+      port: 80
+      targetPort: 3333
   selector:
-    db: mariadb-leocinema
-    tier: db
----
-apiVersion: v1
-data:
-  init.sh: |
-    #!/bin/sh
-    set -e
-
-    apt-get update
-    apt-get install -y mysql-client
-
-    mysql -u root <<EOF
-    CREATE DATABASE IF NOT EXISTS leocinemadb;
-    CREATE USER IF NOT EXISTS 'leocinemauser'@'%' IDENTIFIED BY 'leocinemapass';
-    GRANT ALL PRIVILEGES ON leocinemadb.* TO 'leocinemauser'@'%';
-    FLUSH PRIVILEGES;
-    EOF
-kind: ConfigMap
-metadata:
-  creationTimestamp: null
-  name: mariadb-init-script
-  namespace: leocinema
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mariadb-data
-  namespace: leocinema
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
+    app: leocinema-backend
+    tier: app
 ---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: mariadb
+  name: leocinema-backend-dep
   namespace: leocinema
+  labels:
+    app: leocinema-backend
+    tier: app
 spec:
-  serviceName: mariadb-leocinema-svc
-  replicas: 1
   selector:
     matchLabels:
-      db: mariadb-leocinema
-      tier: db
+      app: leocinema-backend
+      tier: app
+  replicas: 1
   template:
     metadata:
       labels:
-        db: mariadb-leocinema
-        tier: db
+        app: leocinema-backend
+        tier: app
     spec:
       containers:
-        - name: mariadb
-          image: mariadb
+        - name: leocinema
+          image: leobgs/leocinema-backend-test:beta-6
           ports:
-            - containerPort: 3306
-          volumeMounts:
-            - name: mariadb-data
-              mountPath: /var/lib/mysql
+            - name: http
+              containerPort: 3333
+              protocol: TCP
           env:
-            - name: MYSQL_ROOT_PASSWORD
-              value: "leoborges2122"
-          lifecycle:
-            postStart:
-              exec:
-                command:
-                  - "/bin/sh"
-                  - "-c"
-                  - |
-                    mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS leocinemadb;"
-                    mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE USER IF NOT EXISTS 'leocinemauser'@'%' IDENTIFIED BY 'leocinemapass';"
-                    mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "GRANT ALL PRIVILEGES ON leocinemadb.* TO 'leocinemauser'@'%';"
-                    mariadb -u root -p"$MYSQL_ROOT_PASSWORD" -e "FLUSH PRIVILEGES;"
-  volumeClaimTemplates:
-    - metadata:
-        name: mariadb-data
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 1Gi
-
-
+          - name: DB_HOST
+            value: "mariadb-leocinema-svc"
+          - name: DB_DATABASE
+            value: "leocinemadb"
+          - name: DB_USER
+            value: "leocinemauser"
+          - name: DB_PASSWORD
+            value: "leocinemapass"
+          - name: BACKEND_PORT
+            value: "3333"
+          - name: PATH_HEALTH
+            value: "/health"
+          - name: PATH_COMPRAR_INGRESSO
+            value: "/comprar-ingresso"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 200Mi
+          imagePullPolicy: Always
+      restartPolicy: Always
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-public-api
+  namespace: leocinema
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  ingressClassName: nginx
+  rules:
+  - http:
+      paths:
+      - path: /api/?(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: leocinema-backend-svc
+            port:
+              number: 80
