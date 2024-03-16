@@ -38,14 +38,14 @@ spec:
     spec:
       containers:
         - name: leocinema-frontend
-          image: leobgs/leocinema-frontend-test:beta-3
+          image: leobgs/leocinema-frontend-test:beta-final
           ports:
             - name: http
               containerPort: 3000
               protocol: TCP
           env:
           - name: BACKEND_URL
-            value: "4.255.65.128/api/comprar-ingresso"
+            value: "172.171.69.187/api/comprar-ingresso"
           resources:
             requests:
               cpu: 100m
