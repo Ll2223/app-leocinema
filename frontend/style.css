@@ -1,4 +1,3 @@
-/* Estilos CSS aqui */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -17,7 +16,7 @@ body {
 }
 
 .container {
-  width: 600px; /* Aumentamos a largura para acomodar melhor a tabela */
+  width: 600px;
   padding: 20px;
   background: #a50020; /* Vermelho */
   border-radius: 10px;
@@ -74,7 +73,7 @@ input[type="submit"]:hover {
   background: #a50020; /* Vermelho */
   color: #fff; /* Texto branco */
   border-radius: 4px;
-  overflow-x: auto; /* Adicionamos overflow-x para habilitar scroll horizontal */
+  overflow-x: auto;
 }
 
 .cinema-name {
@@ -112,5 +111,5 @@ tr:nth-child(even) {
 }
 
 tr:hover {
-  background-color: #a70019; /* Vermelho mais escuro ao passar o mouse */
+  background-color: #a70019;
 }
