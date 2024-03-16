@@ -38,7 +38,7 @@ spec:
     spec:
       containers:
         - name: leocinema
-          image: leobgs/leocinema-backend-test:beta-6
+          image: leobgs/leocinema-backend-test:beta-final2
           ports:
             - name: http
               containerPort: 3333
@@ -52,12 +52,8 @@ spec:
             value: "leocinemauser"
           - name: DB_PASSWORD
             value: "leocinemapass"
-          - name: BACKEND_PORT
-            value: "3333"
-          - name: PATH_HEALTH
-            value: "/health"
-          - name: PATH_COMPRAR_INGRESSO
-            value: "/comprar-ingresso"
+          - name: FRONTEND_URL
+            value: "http://172.171.69.187"
           resources:
             requests:
               cpu: 100m
