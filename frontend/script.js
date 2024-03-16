@@ -1,5 +1,4 @@
 const backendUrl = `${process.env.BACKEND_URL}`
-//const backendUrl = `${process.env.BACKEND_URL}:${process.env.BACKEND_PORT}`;
 
 function criarTabelaIngressos(compras) {
   const table = document.createElement('table');
@@ -74,18 +73,13 @@ document.getElementById('purchaseForm').addEventListener('submit', async functio
       const quantidade = parseInt(formData.quantity);
       const formattedDate = new Date(formData.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
 
-      // Atualiza a mensagem de sucesso com os detalhes da última compra
-      const mensagemSucesso = `Ingresso(s) comprado(s) com sucesso para o filme ${nomeFilme} no dia ${formattedDate} às ${formData.time}! Bom filme!<br>`;
+      const mensagemSucesso = `Ingresso(s) comprado(s) com sucesso para o filme ${nomeFilme}! Bom filme!<br>`;
       confirmation.innerHTML = `${mensagemSucesso}`;
 
-      // Recupera todas as compras anteriores do local storage
       const comprasAnteriores = JSON.parse(localStorage.getItem('compras')) || [];
-      // Adiciona a nova compra à lista de compras anteriores
       comprasAnteriores.push(formData);
-      // Salva a lista de compras anteriores atualizada no local storage
       localStorage.setItem('compras', JSON.stringify(comprasAnteriores));
 
-      // Cria a tabela de ingressos com todas as compras anteriores
       const tabelaIngressos = criarTabelaIngressos(comprasAnteriores);
       confirmation.appendChild(tabelaIngressos);
     } else {
